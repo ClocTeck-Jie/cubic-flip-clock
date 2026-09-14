@@ -6,7 +6,7 @@ local A = {running=true, light=false, seconds=true, cards={}, timers={}, fonts={
 local diagnostics=file.exists(DIR.."diagnostics.flag")
 _G[NAME] = A
 local S = LV_PART_MAIN | LV_STATE_DEFAULT
-local status = {version="1.1.0", state="starting", cleanup_errors={}, started=tmr.now()}
+local status = {version="1.2.0", state="starting", cleanup_errors={}, started=tmr.now()}
 local function nowms() return tmr.now()/1000 end
 local function report()
   if not diagnostics then return end
@@ -21,12 +21,17 @@ end
 function A.stop(reason)
   if not A.running then return end
   A.running=false
+  if A.web then safe("web",function()A.web:stop()end)end
+  if A.input then safe("input",function()A.input:stop()end)end
+  if A.weather then A.weather:stop()end
+  if app.set_home_exit then pcall(app.set_home_exit,true)end
   safe("left",function() key.off(key.LEFT) end)
   safe("right",function() key.off(key.RIGHT) end)
   for _,t in ipairs(A.timers) do safe("timer",function() t:stop(); t:unregister() end) end
   A.timers={}
   if A.panel then safe("panel",function() lv_obj_del(A.panel) end); A.panel=nil end
   for _,f in ipairs(A.fonts) do safe("font",function() lv_font_free(f) end) end
+  if A.fontManager then safe("fonts",function()A.fontManager:stop()end)end
   A.fonts={}; A.cards={}
   status.state="stopped"; status.reason=tostring(reason or "stop")
   pcall(report)
@@ -58,7 +63,13 @@ local function timeparts()
   if type(t)~="table" or not t.year or t.year<2024 then return nil end
   return t
 end
-local calendar,lunarData,preferences,skins,motion,renderer,cachePolicy
+local calendar,lunarData,preferences,skins,motion,renderer,cachePolicy,L
+local function weatherLabels()
+ if not A.title or not A.weather then return end
+ local w=A.weather
+ A.fontManager:set("city",A.title,12,w.city.."  "..(w.temp and tostring(w.temp).."°C" or "--°C"))
+ if A.language~="zh-CN" then status.lunar=w.text~="" and w.text or L.words[A.language].waiting;A.fontManager:set("bottom",A.lunar,12,status.lunar) end
+end
 local function skin() return skins[A.skinIndex] end
 local function weekday(y,m,d)
   local offsets={0,3,2,5,0,3,5,1,4,6,2,4}
@@ -122,7 +133,7 @@ local function rebuild()
 end
 local function update(animate)
   local t=timeparts();A.time=t
-  if not t then lv_label_set_text(A.date,"等待系统校时");lv_label_set_text(A.lunar,"");return end
+  if not t then A.fontManager:set("date",A.date,16,L.words[A.language].sync);lv_label_set_text(A.lunar,"");return end
   local values={t.hour,t.min,t.sec}
   local stamp=nowms()
   for i,c in ipairs(A.cards) do
@@ -148,11 +159,17 @@ local function update(animate)
   local dateKey=t.year*10000+t.mon*100+t.day
   if A.dateKey~=dateKey then
     A.dateKey=dateKey
-    local names={"日","一","二","三","四","五","六"}
-    status.date=string.format("%04d年%d月%d日  星期%s",t.year,t.mon,t.day,names[weekday(t.year,t.mon,t.day)])
-    status.lunar=calendar.text(lunarData,t.year,t.mon,t.day)
-    lv_label_set_text(A.date,status.date)
-    lv_label_set_text(A.lunar,status.lunar)
+    status.date=L.date(A.language,t,weekday(t.year,t.mon,t.day))
+    if A.language=="zh-CN" then
+      if not calendar then calendar=assert(load(assert(file.getcontents(DIR.."calendar.lua"))))() end
+      if not lunarData then lunarData=assert(load(assert(file.getcontents(DIR.."lunar_data.lua"))))() end
+      status.lunar=calendar.text(lunarData,t.year,t.mon,t.day)
+    else
+      calendar=nil;lunarData=nil
+      status.lunar=A.weather and A.weather.text~="" and A.weather.text or L.words[A.language].waiting
+    end
+    A.fontManager:set("date",A.date,16,status.date)
+    A.fontManager:set("bottom",A.lunar,A.language=="zh-CN" and 13 or 12,status.lunar)
   end
   status.clock=string.format("%02d:%02d:%02d",t.hour,t.min,t.sec)
 end
@@ -173,14 +190,20 @@ local function capture()
 end
 local function start()
   -- 只加载仓库随包提供的纯 Lua 日期模块，农历数据每日查询一次。
-  calendar=assert(load(assert(file.getcontents(DIR.."calendar.lua")),"@calendar.lua"))()
-  lunarData=assert(load(assert(file.getcontents(DIR.."lunar_data.lua")),"@lunar_data.lua"))()
   preferences=assert(load(assert(file.getcontents(DIR.."preferences.lua")),"@preferences.lua"))()
   skins=assert(load(assert(file.getcontents(DIR.."skins.lua"))))()
   motion=assert(load(assert(file.getcontents(DIR.."motion.lua"))))()
   renderer=assert(load(assert(file.getcontents(DIR.."renderer.lua"))))()
   cachePolicy=assert(load(assert(file.getcontents(DIR.."prefetch.lua"))))()
+  L=assert(load(assert(file.getcontents(DIR.."locale.lua"))))()
+  local sysraw=file.getcontents('/sd/apps/settings.json')
+  local ok,system=pcall(sjson.decode,sysraw or '{}');if not ok or type(system)~='table' then system={} end
+  A.systemLanguage=L.normalize(system.language or system.locale or system.lang)
+  A.systemAddress=tostring(system.weather_address or system.weatherAddress or '')
   local saved=preferences.load(file,sjson,DIR.."settings.json")
+  A.languageChoice="auto";A.addressChoice=nil
+  A.language=A.systemLanguage
+  A.address=A.systemAddress
   A.light=saved.light;A.seconds=saved.seconds;A.theme=saved.theme;A.motion=saved.motion
   A.skinIndex=1;for i,v in ipairs(skins) do if v.id==A.theme then A.skinIndex=i end end
   local root=lv_scr_act()
@@ -189,13 +212,11 @@ local function start()
   lv_obj_set_style_bg_opa(root,255,S)
   A.panel=lv_obj_create(root);reset(A.panel)
   lv_obj_set_size(A.panel,320,240);lv_obj_set_style_bg_opa(A.panel,0,S)
-  local function loadfont(size)
-    local f=assert(lv_font_load(DIR.."chinese"..size..".bin"),"Chinese font missing")
-    A.fonts[#A.fonts+1]=f;return f
-  end
-  local font,datefont,lunarfont=loadfont(12),loadfont(16),loadfont(13)
+  A.fontManager=assert(load(assert(file.getcontents(DIR..'fonts.lua'))))().new(DIR)
+  local font,datefont,lunarfont=LV_FONT_MONTSERRAT_12,LV_FONT_MONTSERRAT_16,LV_FONT_MONTSERRAT_12
   box(A.panel,14,26,4,4,0xffffff,2)
-  A.title=label("北京时间",23,21,190,font)
+  A.title=label("",23,21,250,font)
+  lv_label_set_long_mode(A.title,LV_LABEL_LONG_CLIP)
   -- 图标用几何图形绘制，不依赖字体是否包含时钟符号。
   A.icon=box(A.panel,287,21,16,16,0,8)
   lv_obj_set_style_bg_opa(A.icon,0,S)
@@ -207,27 +228,58 @@ local function start()
   A.date=label("",0,183,320,datefont,LV_TEXT_ALIGN_CENTER)
   A.lunar=label("",0,211,320,lunarfont,LV_TEXT_ALIGN_CENTER)
   rebuild();update(false)
-  local function bind(code,left)
-    key.on(code,function(event)
-      if not A.running or (event~=key.LONG_START and (left or event~=key.SHORT)) then return end
-      local ok,e=pcall(function()
-        local text
-        if left then
-          A.skinIndex=A.skinIndex%#skins+1;A.theme=skin().id;A.light=A.theme=="light";text=skin().name
-        elseif event==key.SHORT then
-          local nextMotion={original="rebound",rebound="original"}
-          local names={original="原版翻页",rebound="机械回弹"}
-          A.motion=nextMotion[A.motion];text=names[A.motion]
-        else A.seconds=not A.seconds end
-        if text then lv_label_set_text(A.title,text);A.titleUntil=nowms() end
-        local saved,saveError=preferences.save(file,sjson,DIR.."settings.json",A.light,A.seconds,A.theme,A.motion)
-        status.settings_saved=saved;status.settings_error=saveError
-        rebuild();update(false);status.last_action=left and "theme" or (event==key.SHORT and "motion" or "seconds");report()
-      end)
-      if not ok then status.error=tostring(e);A.stop("input-error") end
-    end)
+  function A.snapshot()
+    local w=A.weather or {}
+    return {ok=true,version='1.2.0',theme=A.theme,motion=A.motion,seconds=A.seconds,language=A.languageChoice,resolved_language=A.language,address=A.addressChoice or '',follow_system_address=A.addressChoice==nil,system_address=A.systemAddress,
+      weather={city=w.city,temp=w.temp,text=w.text,error=w.error,busy=w.busy,id=w.id,updated=w.updated,requests=w.requests},clock=status.clock,date=status.date,bottom=status.lunar,font_bytes=A.fontManager.bytes,runtime_error=status.error,input_profile='original-gyro/launcher-v1.30-pad'}
   end
-  bind(key.LEFT,true);bind(key.RIGHT,false)
+  function A.configure(p)
+    local theme=p.theme or A.theme;local found
+    for i,v in ipairs(skins)do if v.id==theme then found=i end end
+    local mode=p.motion or A.motion;local language="auto"
+    local seconds=A.seconds;if p.seconds~=nil then seconds=p.seconds end
+    local address=nil
+    if not found or (mode~='original' and mode~='rebound') or type(seconds)~='boolean' then return false,'Invalid style' end
+    local ok,err=preferences.save(file,sjson,DIR..'settings.json',theme=='light',seconds,theme,mode,{language=language,address=address})
+    if not ok then return false,err end
+    local changed=A.theme~=theme or A.seconds~=seconds
+    A.theme=theme;A.light=theme=='light';A.skinIndex=found;A.seconds=seconds;A.motion=mode
+    local oldlang,oldaddress=A.language,A.address
+    A.languageChoice=language;A.addressChoice=address
+    A.language=A.systemLanguage
+    A.address=A.systemAddress
+    A.dateKey=nil
+    if changed then A.rebuildPending=true end
+    A.renderPending=true
+    if oldlang~=A.language or oldaddress~=A.address then A.weather:configure(A.language,A.address);A.weather:refresh()end
+    A.weatherDirty=true;report();return true
+  end
+  local Weather=assert(load(assert(file.getcontents(DIR..'weather.lua'))))()
+  A.weather=Weather.new(DIR,L,function()if A.running then A.weatherDirty=true end end);A.weather:configure(A.language,A.address)
+  local Input=assert(load(assert(file.getcontents(DIR..'input.lua'))))()
+  local function change(p)local ok,e=A.configure(p);if not ok then status.settings_error=e end end
+  A.input=Input.new({
+    move=function(d)change({theme=skins[(A.skinIndex-1+d)%#skins+1].id})end,
+    item=function(d)if d<0 then change({seconds=not A.seconds})else change({motion=A.motion=='original' and 'rebound' or 'original'})end end,
+    confirm=function()change({seconds=not A.seconds})end,
+    back=function()app.exit()end,exit=function()app.exit()end})
+  if app.set_home_exit then app.set_home_exit(false)end
+  A.input:start()
+  A.web=assert(load(assert(file.getcontents(DIR..'web.lua'))))().new(DIR,A);A.web:start()
+  local wt=tmr.create();A.timers[#A.timers+1]=wt
+  wt:alarm(60000,tmr.ALARM_AUTO,function()
+    if not A.running then return end
+    local raw=file.getcontents('/sd/apps/settings.json');local ok,d=pcall(sjson.decode,raw or '{}')
+    if ok and type(d)=='table' then
+      local lang=L.normalize(d.language or d.locale or d.lang);local address=tostring(d.weather_address or d.weatherAddress or '')
+      if lang~=A.language or address~=A.address then
+        A.systemLanguage=lang;A.systemAddress=address;A.language=lang;A.address=address;A.dateKey=nil;A.renderPending=true
+        A.weather:configure(lang,address)
+      end
+    end
+    A.weather:refresh()
+  end)
+  A.weather:refresh()
   -- 文档通过 IPC 通知应用停止，不向即将销毁的应用承诺 exit 回调。
   -- 保留显式 stop 与退出标志轮询；不拦截系统原有返回手势。
   local timer=tmr.create();A.timers[#A.timers+1]=timer
@@ -236,16 +288,18 @@ local function start()
     local ok,e=pcall(function()
       if app.exiting() then A.stop("app.exiting");return end
       local began=nowms()
-      A.tick=A.tick+1;update(true)
-      if A.titleUntil and (nowms()-A.titleUntil)%4294967.296>1400 then
-        lv_label_set_text(A.title,"北京时间");A.titleUntil=nil
-      end
+      A.tick=A.tick+1
+      -- All canvas/font mutations happen in this one UI timer, never in HTTP callbacks.
+      if A.rebuildPending then A.rebuildPending=nil;rebuild()end
+      if A.renderPending then A.renderPending=nil;update(false)else update(true)end
+      if A.weatherDirty then A.weatherDirty=nil;weatherLabels()end
+      A.weather:poll()
       local cost=(nowms()-began)%4294967.296
       status.max_update_ms=math.max(status.max_update_ms or 0,cost)
       status.total_update_ms=(status.total_update_ms or 0)+cost
       status.average_update_ms=status.total_update_ms/A.tick
       prefetch()
-      if diagnostics and A.tick==30 then report() end
+      if diagnostics and A.tick==100 then report() end
       if A.tick%250==0 then report() end
     end)
     if not ok then status.error=tostring(e);A.stop("timer-error") end

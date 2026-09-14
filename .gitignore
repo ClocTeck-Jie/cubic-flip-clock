@@ -9,3 +9,6 @@ package/sample-*.png
 node_modules/
 package/diagnostics.flag
 package/settings.json
+
+package/weather-cache.json
+package/.font-*.bin

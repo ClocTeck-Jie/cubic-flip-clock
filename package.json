@@ -3,11 +3,16 @@
   "private": true,
   "scripts": {
     "build:lunar": "node tools/build_lunar.cjs",
-    "test:calendar": "node tools/test_calendar.cjs"
+    "test:calendar": "node tools/test_calendar.cjs",
+    "test": "node tools/test_app.cjs && node tools/test_fonts.cjs && node tools/test_web.cjs",
+    "test:core": "fengari tools/test_preferences.lua && fengari tools/test_motion.lua && fengari tools/test_renderer.lua && fengari tools/test_prefetch.lua"
   },
   "devDependencies": {
     "fengari-node-cli": "0.1.0",
     "lunar-javascript": "1.7.7",
-    "lv_font_conv": "1.5.3"
+    "lv_font_conv": "1.5.3",
+    "fengari": "0.1.5",
+    "fengari-interop": "0.1.4",
+    "linkedom": "0.18.13"
   }
 }

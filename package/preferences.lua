@@ -7,7 +7,7 @@ function P.load(storage,json,path)
     local raw=storage.getcontents(path)
     return raw and json.decode(raw) or nil
   end)
-  local result={light=false,seconds=true,theme='dark',motion='original'}
+  local result={light=false,seconds=true,theme='dark',motion='original',language='auto',address=nil}
   if ok and type(data)=='table' then
     if type(data.light)=='boolean' then result.light=data.light end
     if type(data.seconds)=='boolean' then result.seconds=data.seconds end
@@ -16,20 +16,25 @@ function P.load(storage,json,path)
     elseif themes[data.theme] then result.theme=data.theme end
     if motions[data.motion] then result.motion=data.motion end
     result.light=result.theme=='light'
+    if data.language=='auto' or data.language=='zh-CN' or data.language=='en' or data.language=='de' or data.language=='ja' then result.language=data.language end
+    if type(data.address)=='string' and #data.address<=120 then result.address=data.address end
   end
   return result
 end
-function P.save(storage,json,path,light,seconds,theme,motion)
+function P.save(storage,json,path,light,seconds,theme,motion,extra)
   theme=theme or (light and 'light' or 'dark');motion=motion or 'original'
   local ok,err=pcall(function()
     assert(themes[theme] and motions[motion],'invalid preferences')
-    local raw=json.encode({version=2,light=theme=='light',seconds=seconds,theme=theme,motion=motion})
+    local doc={version=3,light=theme=='light',seconds=seconds,theme=theme,motion=motion}
+    if extra then doc.language=extra.language;doc.address=extra.address end
+    local raw=json.encode(doc)
     storage.putcontents(path,raw)
     -- 检查实际读回，覆盖返回 nil 但没有抛错的固件文件 API。
     -- assert(value, message) 成功时也会透传 message，不能直接作为 decode 的参数。
     local readback=storage.getcontents(path)
     assert(readback,'settings write failed')
     local stored=json.decode(readback)
+    if extra then assert(stored.language==extra.language and stored.address==extra.address,'extra settings verification failed') end
     assert(stored.theme==theme and stored.motion==motion and stored.seconds==seconds,'settings verification failed')
   end)
   if ok then return true end

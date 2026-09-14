@@ -6,7 +6,7 @@
 
 安装 requirements-build.txt 中的 Python 依赖和 package.json 中的开发依赖。
 
-- `python tools/build_text_fonts.py`：从仓库的开放字体子集生成设备字体。
+- `python tools/build_text_fonts.py --source /path/to/NotoSansSC-Medium.otf`：从完整 OFL 字体构建字形库和按需读取索引。不给 `--source` 时仅重建已有字库的索引。
 - `npm run build:lunar`：生成农历月份表。
 - `python tools/build_skin_assets.py`：生成七种皮肤的逐卡压缩图片，需要本机 Arial Bold；黑白普通帧沿用已有 RGB565 数据。
 - `python tools/package_release.py`：检查部署文件并生成 ZIP 和校验清单，仅打包不需要 Pillow。
@@ -14,6 +14,8 @@
 更改数字资源后需要重新进行实机视觉验收。普通安装只需复制 package 内的文件。
 
 ## 验证
+
+`npm test` 检查本版本新增的天气、本地化、原作者重力映射、手柄、字体和网页行为。`npm run test:core` 执行原有偏好、动画、渲染和预读测试。
 
 运行 `python tools/fetch_calendar_references.py` 获取香港天文台对照表，再运行 `npm run test:calendar`。日期测试直接执行设备所用的 Lua 模块。
 

@@ -11,14 +11,16 @@ package = root / 'package'
 metadata = dict(line.split('=',1) for line in (package/'app.info').read_text(encoding='utf-8').splitlines() if '=' in line)
 metadata = {k.strip():v.strip() for k,v in metadata.items()}
 assert metadata['kind']=='app' and metadata['category']=='clock' and metadata['catalog_scope']=='community'
-required = ['app.info',metadata['entry'],metadata['icon'],'info.html','chinese12.bin','chinese13.bin','chinese16.bin','calendar.lua','lunar_data.lua','preferences.lua','skins.lua','motion.lua','renderer.lua','prefetch.lua']
+required = ['fonts.lua','glyph12.idx','glyph13.idx','glyph16.idx','locale.lua','weather.lua','input.lua','web.lua','index.html','app.info',metadata['entry'],metadata['icon'],'info.html','chinese12.bin','chinese13.bin','chinese16.bin','calendar.lua','lunar_data.lua','preferences.lua','skins.lua','motion.lua','renderer.lua','prefetch.lua']
 for size in ('small','large'):
     for theme in ('dark','light','amber','ice','violet','cream','blood'):
         required.extend([f'skins/{size}-{theme}.idx',f'skins/{size}-{theme}.dat'])
 for name in required:
     path = package/name
     assert path.is_file() and path.stat().st_size>0,name
-    if name.endswith('.idx'):
+    if name.startswith('glyph') and name.endswith('.idx'):
+        assert path.stat().st_size==65536*8,name
+    if name.startswith('skins/') and name.endswith('.idx'):
         index=path.read_bytes();assert len(index)==480,name
         data=path.with_suffix('.dat').read_bytes()
         expected=94*100*2 if path.name.startswith('small-') else 140*116*2

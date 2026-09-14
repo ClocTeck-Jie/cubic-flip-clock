@@ -2,11 +2,7 @@
 
 ## 中文字体：SIL Open Font License 1.1
 
-中文字体由 Noto Sans SC Regular 的开放字体子集构建。源字体的 name 表明确包含 SIL Open Font License 1.1 声明，版权为 © 2014–2021 Adobe，保留名称为 Source。
-
-本项目将字体实例化为字重 400，仅保留应用所需字符，重命名为 Cubic Clock CJK；源子集为 assets/fonts/CubicClockCJK.ttf，设备二进制为 package/chinese12.bin、chinese13.bin、chinese16.bin。原始源文件的版本、SHA-256、内嵌版权和许可记录在 assets/fonts/source.json。完整许可与版权声明见 licenses/OFL-NotoSansCJK.txt。
-
-这批字体替换了早期从天气应用复制、未确认对应来源的中文字体。新字体不适用项目 MIT 许可，而依 OFL 分发。
+设备字体由 Noto Sans SC Medium（SIL Open Font License 1.1）构建，保留源字体的字符轮廓。完整许可见 licenses/OFL-NotoSansCJK.txt。三份 .bin 是存储在 SD 卡的字形库，glyph*.idx 是按 Unicode 编号寻址的索引。运行时只读取当前文本所需的字形记录，组装小型 LVGL 字体并释放被替换的字体，不把整库载入内存。原始 1.1.0 的 CubicClockCJK.ttf 子集保留在 assets 目录作为上游资源记录，不是本次设备字库的构建输入。
 
 ## 农历数据：MIT
 

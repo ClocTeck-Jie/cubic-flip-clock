@@ -5,10 +5,13 @@ name_zh_tw = 翻頁時鐘
 name_en = Flip Clock
 name_ja = フリップ時計
 icon = main.png
-version = 1.1.0
+version = 1.2.0
 kind = app
 category = clock
 catalog_scope = community
 entry = main.lua
 description = 七种皮肤，机械回弹，倾斜切换设置，显示年月日、星期和农历
 description_zh_cn = 七种皮肤，机械回弹，倾斜切换设置，显示年月日、星期和农历
+
+name_de = Flip-Uhr
+webui = true
