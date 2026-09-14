@@ -12,3 +12,5 @@ package/settings.json
 
 package/weather-cache.json
 package/.font-*.bin
+
+package/*.rgb

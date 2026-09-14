@@ -11,6 +11,8 @@
 - `python tools/build_skin_assets.py`：生成七种皮肤的逐卡压缩图片，需要本机 Arial Bold；黑白普通帧沿用已有 RGB565 数据。
 - `python tools/package_release.py`：检查部署文件并生成 ZIP 和校验清单，仅打包不需要 Pillow。
 
+旧 RGB 图集保存在 `assets/legacy/`，`build_assets.py` 也只将原始图集写入此目录；`build_skin_assets.py` 从这里生成 `package/skins/` 的压缩运行资源。安装包不包含 `assets/`。
+
 更改数字资源后需要重新进行实机视觉验收。普通安装只需复制 package 内的文件。
 
 ## 验证

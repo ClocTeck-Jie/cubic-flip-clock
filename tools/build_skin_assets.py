@@ -22,7 +22,15 @@ for size,w,h,fs in [('small',94,100,68),('large',140,116,85)]:
         masks.append(mask.resize((w,h),Image.Resampling.LANCZOS))
     for name,top,bottom,ink in skins:
         stem=f'{size}-{name}';index=bytearray();archive=bytearray()
-        old=(root/f'package/{stem}.rgb').read_bytes() if name in ['dark','light'] else None
+        old=None
+        if name in ['dark','light']:
+            legacy=root/f'assets/legacy/{stem}.rgb'
+            if legacy.exists():
+                old=legacy.read_bytes()
+            else:
+                # A runtime-only checkout can preserve pixels from its compressed atlas.
+                prior_index=(out/f'{stem}.idx').read_bytes();prior_data=(out/f'{stem}.dat').read_bytes()
+                old=b''.join(zlib.decompress(prior_data[o:o+n]) for o,n in struct.iter_unpack('<II',prior_index))
         for n,mask in enumerate(masks):
             bg=Image.new('RGB',(w,h),rgb(top));ImageDraw.Draw(bg).rectangle((0,h//2,w,h),fill=rgb(bottom))
             normal=Image.composite(Image.new('RGB',(w,h),rgb(ink)),bg,mask)
@@ -32,5 +40,6 @@ for size,w,h,fs in [('small',94,100,68),('large',140,116,85)]:
             index.extend(struct.pack('<II',len(archive),len(packed)));archive.extend(packed)
         (out/f'{stem}.idx').write_bytes(index);(out/f'{stem}.dat').write_bytes(archive)
         manifest[stem]={'bytes':len(archive),'width':w,'height':h}
+(root/'_temp').mkdir(exist_ok=True)
 (root/'_temp/skin-assets.json').write_text(json.dumps(manifest,indent=2))
 print('Verified 840 compressed card images; bytes:',sum(x['bytes'] for x in manifest.values()))

@@ -3,8 +3,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import struct
 
-out = Path(__file__).resolve().parents[1] / 'package'
-out.mkdir(exist_ok=True)
+out = Path(__file__).resolve().parents[1] / 'assets' / 'legacy'
+out.mkdir(parents=True,exist_ok=True)
 for large, width, height, size in [(False,94,100,68),(True,140,116,85)]:
     font = ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf', size * 3)
     for light in [False,True]:

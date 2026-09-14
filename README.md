@@ -29,7 +29,11 @@
 
 ## 安装和使用
 
-1. 下载本仓库并解压，将 `package/` 内的文件和子目录上传至 `/sd/apps/flip-clock/`，保持目录结构。入口应为 `/sd/apps/flip-clock/main.lua`。
+**[下载精简运行包（约 2.85 MB）](https://github.com/ClocTeck-Jie/cubic-flip-clock/releases/download/v1.2.0/flip-clock-1.2.0.zip)**
+
+运行包只含应用运行文件、商店介绍和必要许可，不含开发工具、测试、记录、预览 GIF 或旧 RGB 图集。无需下载整个源码仓库。旧 RGB 图集仅在 `assets/legacy/` 保留用于资源构建，不在 `package/` 或运行 ZIP 中。
+
+1. 下载上面的运行 ZIP，将解压后的文件和子目录上传至 `/sd/apps/flip-clock/`，保持目录结构。入口应为 `/sd/apps/flip-clock/main.lua`。
 2. 在设备上重新扫描应用并启动翻页时钟。升级时保留设备已有的 `settings.json`，不要复制其他设备的运行缓存。
 3. 在 Launcher 中设置语言、时区和天气地址，连接网络并完成校时。
 4. 启动后访问 `http://设备IP/flip-clock/` 调整外观；控制页不提供独立的语言、天气地址设置。
