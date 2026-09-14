@@ -1,4 +1,4 @@
-# Cubic 翻页时钟 1.2.0
+# Cubic 翻页时钟 1.2.1
 
 为 HoloCubic 320×240 小屏制作的 Lua 翻页时钟，提供独立天气、网页设置和手柄支持。
 
@@ -29,14 +29,14 @@
 
 ## 安装和使用
 
-**[下载精简运行包（约 2.85 MB）](https://github.com/ClocTeck-Jie/cubic-flip-clock/releases/download/v1.2.0/flip-clock-1.2.0.zip)**
+**[下载精简运行包（约 2.85 MB）](https://github.com/ClocTeck-Jie/cubic-flip-clock/releases/download/v1.2.1/flip-clock-1.2.1.zip)**
 
 运行包只含应用运行文件、商店介绍和必要许可，不含开发工具、测试、记录、预览 GIF 或旧 RGB 图集。无需下载整个源码仓库。旧 RGB 图集仅在 `assets/legacy/` 保留用于资源构建，不在 `package/` 或运行 ZIP 中。
 
 1. 下载上面的运行 ZIP，将解压后的文件和子目录上传至 `/sd/apps/flip-clock/`，保持目录结构。入口应为 `/sd/apps/flip-clock/main.lua`。
 2. 在设备上重新扫描应用并启动翻页时钟。升级时保留设备已有的 `settings.json`，不要复制其他设备的运行缓存。
 3. 在 Launcher 中设置语言、时区和天气地址，连接网络并完成校时。
-4. 启动后访问 `http://设备IP/flip-clock/` 调整外观；控制页不提供独立的语言、天气地址设置。
+4. 启动后从设备控制台进入应用网页调整外观；商店安装通常为 `http://设备IP/cubic-flip-clock/`，上述手动安装为 `http://设备IP/flip-clock/`。控制页不提供独立的语言、天气地址设置。
 
 应用商店介绍见 [package/info.html](package/info.html)。安装时无需自行构建字体或运行开发工具。`/sd` 是固件提供的存储路径，不代表一定需要外置 SD 卡。
 
@@ -72,3 +72,7 @@ python tools/package_release.py
 ## 许可
 
 代码采用 MIT 许可，保留 Cubic Flip Clock contributors 的版权声明。字体和其他第三方资源按各自许可分发，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+## 1.2.1 修复
+
+修复商店按仓库名 `cubic-flip-clock` 安装后无法启动的问题：资源目录现在跟随当前应用路由，不再固定为 `flip-clock`。兼容原手动安装目录，并补充目录解析回归测试。

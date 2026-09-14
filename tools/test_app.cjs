@@ -6,6 +6,14 @@ globalThis.source=n=>fs.readFileSync(path.join(root,n),'utf8');
 function run(s){if(lauxlib.luaL_dostring(L,to_luastring(s)))throw Error(to_jsstring(lua.lua_tostring(L,-1)))}
 for(const n of fs.readdirSync(root).filter(n=>n.endsWith('.lua'))){let b=fs.readFileSync(path.join(root,n));if(lauxlib.luaL_loadbuffer(L,b,b.length,to_luastring(n)))throw Error(to_jsstring(lua.lua_tostring(L,-1)));lua.lua_pop(L,1)}
 run(`local js=require('js');function module(n)return assert(load(js.global:source(n)))()end
+local entry=js.global:source('main.lua');local prefix=entry:match('^(.-)local prior =')
+local function directory(api)app=api;return assert(load(prefix..' return DIR'))()end
+assert(directory({route_base=function()return '/cubic-flip-clock' end})=='/sd/apps/cubic-flip-clock/')
+assert(directory({route_base=function()return '/flip-clock/' end})=='/sd/apps/flip-clock/')
+assert(directory({route_base=function()return '/custom-clock' end})=='/sd/apps/custom-clock/')
+assert(directory({})=='/sd/apps/flip-clock/')
+assert(directory({route_base=function()error('unavailable')end})=='/sd/apps/flip-clock/')
+assert(directory({route_base=function()return '/../other' end})=='/sd/apps/flip-clock/')
 local L=module('locale.lua');assert(L.normalize('de-DE')=='de');assert(L.normalize('ja_JP')=='ja')
 local t={year=2026,mon=9,day=11};assert(L.date('de',t,6)=='11.09.2026  Freitag');assert(L.date('ja',t,6)=='2026年9月11日  金曜日')
 local files={};local docs={};local seq=0

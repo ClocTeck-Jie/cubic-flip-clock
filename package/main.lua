@@ -1,12 +1,18 @@
 -- 正式翻页钟：数字图集按卡片流式读取；左右倾斜使用已验证的 LONG_START。
+-- 商店使用仓库名安装，手动安装可以使用其他目录；资源跟随当前应用。
 local DIR, NAME = "/sd/apps/flip-clock/", "CUBIC_FLIP_CLOCK"
+if app and type(app.route_base)=="function" then
+  local ok, route = pcall(app.route_base)
+  local id = ok and type(route)=="string" and route:match("^/([%w_-]+)/?$")
+  if id then DIR = "/sd/apps/"..id.."/" end
+end
 local prior = rawget(_G, NAME)
 if prior and prior.stop then pcall(prior.stop, "reload") end
 local A = {running=true, light=false, seconds=true, cards={}, timers={}, fonts={}, tick=0, flips=0}
 local diagnostics=file.exists(DIR.."diagnostics.flag")
 _G[NAME] = A
 local S = LV_PART_MAIN | LV_STATE_DEFAULT
-local status = {version="1.2.0", state="starting", cleanup_errors={}, started=tmr.now()}
+local status = {version="1.2.1", state="starting", cleanup_errors={}, started=tmr.now()}
 local function nowms() return tmr.now()/1000 end
 local function report()
   if not diagnostics then return end
@@ -230,7 +236,7 @@ local function start()
   rebuild();update(false)
   function A.snapshot()
     local w=A.weather or {}
-    return {ok=true,version='1.2.0',theme=A.theme,motion=A.motion,seconds=A.seconds,language=A.languageChoice,resolved_language=A.language,address=A.addressChoice or '',follow_system_address=A.addressChoice==nil,system_address=A.systemAddress,
+    return {ok=true,version='1.2.1',theme=A.theme,motion=A.motion,seconds=A.seconds,language=A.languageChoice,resolved_language=A.language,address=A.addressChoice or '',follow_system_address=A.addressChoice==nil,system_address=A.systemAddress,
       weather={city=w.city,temp=w.temp,text=w.text,error=w.error,busy=w.busy,id=w.id,updated=w.updated,requests=w.requests},clock=status.clock,date=status.date,bottom=status.lunar,font_bytes=A.fontManager.bytes,runtime_error=status.error,input_profile='original-gyro/launcher-v1.30-pad'}
   end
   function A.configure(p)
